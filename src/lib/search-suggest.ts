@@ -27,30 +27,98 @@ type Kind = {
   useCategory?: boolean;
   /** Marques à ne pas proposer pour ce type. */
   skipBrands?: string[];
+  /** Exclure les produits dont le nom contient un de ces mots. */
+  notWords?: string[];
 };
 
 const KINDS: Kind[] = [
   { words: ["batterie"], label: "Batterie", nameWords: ["batterie"] },
   { words: ["ecran"], label: "Écran", nameWords: ["ecran"] },
-  { words: ["vitre"], label: "Vitre arrière", nameWords: ["vitre"] },
+  {
+    words: ["vitre"],
+    label: "Vitre arrière",
+    nameWords: ["vitre"],
+    notWords: ["camera"],
+  },
+  { words: ["camera", "vitre"], label: "Vitre caméra", nameWords: ["camera"] },
   { words: ["bout"], label: "Bout de charge", nameWords: ["bout"] },
   { words: ["capteur"], label: "Capteur", nameWords: ["capteur"] },
   { words: ["chargeur"], label: "Chargeur", nameWords: ["chargeur", "tete"] },
   { words: ["cable"], label: "Câble", nameWords: ["cable"] },
   { words: ["power"], label: "Power bank", nameWords: ["power"] },
-  { words: ["coque", "pochette", "incassable"], label: "Coque", categories: ["coq"], useCategory: true },
+  {
+    words: ["coque", "pochette", "incassable"],
+    label: "Coque",
+    categories: ["coq"],
+    useCategory: true,
+  },
   { words: ["vis"], label: "Vis", nameWords: ["vis"] },
-  { words: ["manette"], label: "Manette", nameWords: ["manette"], categories: ["manette"] },
-  { words: ["console"], label: "Console", categories: ["console"], useCategory: true },
-  { words: ["jeu", "cd", "game"], label: "Jeux", categories: ["cd", "copie-de-jeux"], useCategory: true },
-  { words: ["telephone", "tel", "portable", "smartphone"], label: "Téléphone", categories: ["telephone", "iphone", "motorola"], useCategory: true, skipBrands: ["iPad", "Garmin", "Apple Watch"] },
-  { words: ["pc", "ordinateur", "laptop", "macbook"], label: "PC", categories: ["pc"], useCategory: true },
-  { words: ["woofer", "enceinte", "baffle", "mp"], label: "Woofer", categories: ["mp3"], useCategory: true },
-  { words: ["casque", "ecouteur"], label: "Casque", nameWords: ["casque", "ecouteur"] },
-  { words: ["cle", "usb", "memoire", "carte"], label: "Clé USB", categories: ["cle-usb"], useCategory: true },
-  { words: ["pencil", "pen", "stylet"], label: "Pencil", categories: ["pencil"], useCategory: true },
-  { words: ["adaptateur", "souris", "hub"], label: "Adaptateur", categories: ["adaptateur"], useCategory: true },
-  { words: ["sac", "pose", "sacoche"], label: "Sac PC", categories: ["sac"], useCategory: true },
+  {
+    words: ["manette"],
+    label: "Manette",
+    nameWords: ["manette"],
+    categories: ["manette"],
+  },
+  {
+    words: ["console"],
+    label: "Console",
+    categories: ["console"],
+    useCategory: true,
+  },
+  {
+    words: ["jeu", "cd", "game"],
+    label: "Jeux",
+    categories: ["cd", "copie-de-jeux"],
+    useCategory: true,
+  },
+  {
+    words: ["telephone", "tel", "portable", "smartphone"],
+    label: "Téléphone",
+    categories: ["telephone", "iphone", "motorola"],
+    useCategory: true,
+    skipBrands: ["iPad", "Garmin", "Apple Watch"],
+  },
+  {
+    words: ["pc", "ordinateur", "laptop", "macbook"],
+    label: "PC",
+    categories: ["pc"],
+    useCategory: true,
+  },
+  {
+    words: ["woofer", "enceinte", "baffle", "mp"],
+    label: "Woofer",
+    categories: ["mp3"],
+    useCategory: true,
+  },
+  {
+    words: ["casque", "ecouteur"],
+    label: "Casque",
+    nameWords: ["casque", "ecouteur"],
+  },
+  {
+    words: ["cle", "usb", "memoire", "carte"],
+    label: "Clé USB",
+    categories: ["cle-usb"],
+    useCategory: true,
+  },
+  {
+    words: ["pencil", "pen", "stylet"],
+    label: "Pencil",
+    categories: ["pencil"],
+    useCategory: true,
+  },
+  {
+    words: ["adaptateur", "souris", "hub"],
+    label: "Adaptateur",
+    categories: ["adaptateur"],
+    useCategory: true,
+  },
+  {
+    words: ["sac", "pose", "sacoche"],
+    label: "Sac PC",
+    categories: ["sac"],
+    useCategory: true,
+  },
 ];
 
 /** Marques / plateformes reconnues dans le nom (expression sur le nom normalisé). */
@@ -68,6 +136,7 @@ const BRANDS: { re: RegExp; label: string; q: string }[] = [
   { re: /\bsamsung\b|\bgalaxy\b/, label: "Samsung", q: "samsung" },
   { re: /\bpixel\b|\bgoogle\b/, label: "Pixel", q: "pixel" },
   { re: /\bhuawei\b/, label: "Huawei", q: "huawei" },
+  { re: /\bhonor\b/, label: "Honor", q: "honor" },
   { re: /\bredmi\b|\bxiaomi\b|\bpoco\b/, label: "Redmi", q: "redmi" },
   { re: /\btecno\b/, label: "Tecno", q: "tecno" },
   { re: /\bitel\b/, label: "Itel", q: "itel" },
@@ -101,13 +170,64 @@ function info(p: Product) {
 
 function isKind(p: Product, k: Kind): boolean {
   const { words } = info(p);
-  if (k.nameWords?.some((nw) => words.some((w) => w.startsWith(nw)))) return true;
-  if (k.categories?.some((c) => p.categorySlugs.some((s) => s.startsWith(c)))) return true;
+  if (k.notWords?.some((nw) => words.some((w) => w.startsWith(nw))))
+    return false;
+  if (k.nameWords?.some((nw) => words.some((w) => w.startsWith(nw))))
+    return true;
+  if (k.categories?.some((c) => p.categorySlugs.some((s) => s.startsWith(c))))
+    return true;
   return false;
 }
 
 function categoryFor(p: Product, k: Kind): string | undefined {
-  return p.categorySlugs.find((s) => k.categories?.some((c) => s.startsWith(c)));
+  return p.categorySlugs.find((s) =>
+    k.categories?.some((c) => s.startsWith(c)),
+  );
+}
+
+function kindSuggestions(
+  kind: Kind,
+  products: Product[],
+  max: number,
+): Suggestion[] {
+  const found = new Map<string, Suggestion>();
+  let any: Product | undefined;
+  for (const p of products) {
+    if (!isKind(p, kind)) continue;
+    any ??= p;
+    const brand = BRANDS.find((b) => b.re.test(info(p).name));
+    if (!brand || kind.skipBrands?.includes(brand.label)) continue;
+    const label = `${kind.label} ${brand.label}`;
+    const prev = found.get(label);
+    if (prev) {
+      prev.count++;
+      continue;
+    }
+    const category = kind.useCategory ? categoryFor(p, kind) : undefined;
+    found.set(label, {
+      label,
+      q: category ? brand.q : label,
+      ...(category ? { category } : {}),
+      count: 1,
+    });
+  }
+  const list = [...found.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, max);
+  // Bouton « tout voir » pour ce type (utile quand des produits n’ont pas de marque).
+  if (any) {
+    const oneCategory = kind.useCategory && kind.categories?.length === 1;
+    const category = oneCategory ? categoryFor(any, kind) : undefined;
+    if (category || kind.nameWords) {
+      list.push({
+        label: `Tout voir : ${kind.label}`,
+        q: category ? "" : kind.label,
+        ...(category ? { category } : {}),
+        count: 0,
+      });
+    }
+  }
+  return list;
 }
 
 export function suggest(
@@ -124,58 +244,31 @@ export function suggest(
   const first = tokens[0];
   if (first.length < 2) return [];
 
-  const kind = KINDS.find((k) =>
+  const kinds = KINDS.filter((k) =>
     k.words.some((w) => w.startsWith(first) || first.startsWith(w)),
   );
-
-  if (kind) {
-    const found = new Map<string, Suggestion>();
-    let any: Product | undefined;
-    for (const p of products) {
-      if (!isKind(p, kind)) continue;
-      any ??= p;
-      const brand = BRANDS.find((b) => b.re.test(info(p).name));
-      if (!brand || kind.skipBrands?.includes(brand.label)) continue;
-      const label = `${kind.label} ${brand.label}`;
-      const prev = found.get(label);
-      if (prev) {
-        prev.count++;
-        continue;
-      }
-      const category = kind.useCategory ? categoryFor(p, kind) : undefined;
-      found.set(label, {
-        label,
-        q: category ? brand.q : label,
-        ...(category ? { category } : {}),
-        count: 1,
-      });
-    }
-    const list = [...found.values()].sort((a, b) => b.count - a.count).slice(0, max);
-    // Bouton « tout voir » pour ce type (utile quand des produits n’ont pas de marque).
-    if (any) {
-      const oneCategory = kind.useCategory && kind.categories?.length === 1;
-      const category = oneCategory ? categoryFor(any, kind) : undefined;
-      if (category || kind.nameWords) {
-        list.push({
-          label: `Tout voir : ${kind.label}`,
-          q: category ? "" : kind.label,
-          ...(category ? { category } : {}),
-          count: 0,
-        });
-      }
-    }
-    if (list.length > 0) return list;
-  }
+  const all: Suggestion[] = [];
+  for (const kind of kinds) all.push(...kindSuggestions(kind, products, max));
+  if (all.length > 0) return all.slice(0, max);
 
   // Sinon : catégories dont un mot commence par ce qui est tapé.
   return categories
     .filter((c) => {
-      const words = norm(`${c.name} ${c.shortName ?? ""} ${c.slug.replace(/-/g, " ")}`).split(" ");
-      return words.some((w) => w.length > 2 && w.startsWith(norm(query).split(" ")[0]));
+      const words = norm(
+        `${c.name} ${c.shortName ?? ""} ${c.slug.replace(/-/g, " ")}`,
+      ).split(" ");
+      return words.some(
+        (w) => w.length > 2 && w.startsWith(norm(query).split(" ")[0]),
+      );
     })
     .slice(0, max)
     .map((c) => {
       const lower = c.name.toLowerCase();
-      return { label: lower.charAt(0).toUpperCase() + lower.slice(1), q: "", category: c.slug, count: 0 };
+      return {
+        label: lower.charAt(0).toUpperCase() + lower.slice(1),
+        q: "",
+        category: c.slug,
+        count: 0,
+      };
     });
 }
